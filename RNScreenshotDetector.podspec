@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.dependency 'React'
 
   s.subspec 'Core' do |ss|
-    ss.source_files     = "RNScreenshotDetector/*.{h,m}"
+    ss.source_files     = "ios/RNScreenshotDetector/*.{h,m}"
   end
 
 end
