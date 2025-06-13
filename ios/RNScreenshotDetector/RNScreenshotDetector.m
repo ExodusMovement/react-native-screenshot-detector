@@ -91,6 +91,7 @@ RCT_EXPORT_MODULE();
 RCT_EXPORT_METHOD(disableScreenshots) {
     dispatch_async(dispatch_get_main_queue(), ^{
         isProtectionEnabled = YES;
+        [self enableTrueScreenshotPrevention];
         
         if (@available(iOS 11.0, *)) {
             BOOL currentlyRecording = [UIScreen mainScreen].isCaptured;
@@ -104,6 +105,7 @@ RCT_EXPORT_METHOD(disableScreenshots) {
 RCT_EXPORT_METHOD(enableScreenshots) {
     dispatch_async(dispatch_get_main_queue(), ^{
         isProtectionEnabled = NO;
+        [self disableTrueScreenshotPrevention];
         [self hideSecurityOverlay];
     });
 }
@@ -115,6 +117,39 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
         resolve(@(isRecording));
     } else {
         resolve(@NO);
+    }
+}
+
+// Screenshot Prevention using Secure Text Field
+- (void)enableTrueScreenshotPrevention {
+    if (self.secureTextField == nil) {
+        self.secureTextField = [[UITextField alloc] init];
+        self.secureTextField.userInteractionEnabled = NO;
+        self.secureTextField.secureTextEntry = YES;
+        
+        UIWindow *keyWindow = [self getKeyWindow];
+        if (keyWindow != nil) {
+            [keyWindow makeKeyAndVisible];
+            
+            // Make the app window a sublayer of the secure text field
+            [keyWindow.layer.superlayer addSublayer:self.secureTextField.layer];
+            
+            // Add the window layer as a sublayer of the secure text field
+            if (self.secureTextField.layer.sublayers.firstObject) {
+                [self.secureTextField.layer.sublayers.firstObject addSublayer:keyWindow.layer];
+            }
+            if (self.secureTextField.layer.sublayers.lastObject) {
+                [self.secureTextField.layer.sublayers.lastObject addSublayer:keyWindow.layer];
+            }
+        }
+    } else {
+        self.secureTextField.secureTextEntry = YES;
+    }
+}
+
+- (void)disableTrueScreenshotPrevention {
+    if (self.secureTextField != nil) {
+        self.secureTextField.secureTextEntry = NO;
     }
 }
 
@@ -178,6 +213,7 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
 
 - (void)dealloc {
     [self stopObserving];
+    [self disableTrueScreenshotPrevention];
 }
 
 @end 
