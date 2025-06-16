@@ -1,4 +1,5 @@
-import { NativeEventEmitter, NativeModules } from 'react-native'
+import { NativeEventEmitter, NativeModules, requireNativeComponent, findNodeHandle } from 'react-native'
+import React, { forwardRef, useImperativeHandle, useRef } from 'react'
 
 const { RNScreenshotDetector } = NativeModules
 const eventEmitter = new NativeEventEmitter(RNScreenshotDetector)
@@ -44,12 +45,43 @@ const isScreenRecording = () => {
   }
 }
 
+const RNSecureViewNative = requireNativeComponent('RNSecureView')
+
+const SecureView = forwardRef(({ enabled = true, children, ...props }, ref) => {
+  const viewRef = useRef(null)
+
+  useImperativeHandle(ref, () => ({
+    enableProtection: () => {
+      const reactTag = findNodeHandle(viewRef.current)
+      if (reactTag && NativeModules.RNSecureView) {
+        NativeModules.RNSecureView.enableProtection(reactTag)
+      }
+    },
+    disableProtection: () => {
+      const reactTag = findNodeHandle(viewRef.current)
+      if (reactTag && NativeModules.RNSecureView) {
+        NativeModules.RNSecureView.disableProtection(reactTag)
+      }
+    },
+  }))
+
+  return React.createElement(RNSecureViewNative, {
+    ref: viewRef,
+    enabled: enabled,
+    ...props
+  }, children)
+})
+
+SecureView.displayName = 'SecureView'
+
 const ScreenshotDetector = {
   subscribe,
   subscribeToScreenRecording,
   disableScreenshots,
   enableScreenshots,
   isScreenRecording,
+  SecureView, 
 }
 
 export default ScreenshotDetector
+export { SecureView }
