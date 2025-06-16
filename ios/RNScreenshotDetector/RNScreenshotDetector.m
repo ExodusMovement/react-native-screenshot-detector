@@ -58,14 +58,6 @@ RCT_EXPORT_MODULE();
 - (void)screenshotDetected:(NSNotification *)notification {
     if (screenshotObserver != nil) {
         [self sendEventWithName:@"ScreenshotTaken" body:@{}];
-        
-        if (isProtectionEnabled) {
-            [self showSecurityOverlay];
-            
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                [self hideSecurityOverlay];
-            });
-        }
     }
 }
 
@@ -159,9 +151,17 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
     UIWindow *keyWindow = [self getKeyWindow];
     
     if (keyWindow != nil) {
-        securityOverlay = [[UIView alloc] initWithFrame:keyWindow.bounds];
-        securityOverlay.backgroundColor = [UIColor blackColor];
-        securityOverlay.alpha = 1.0;
+        // Use light blur with dark tint for subtle but dark effect
+        UIBlurEffect *blurEffect;
+        if (@available(iOS 13.0, *)) {
+            blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark];
+        } else {
+            blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
+        }
+        
+        securityOverlay = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
+        securityOverlay.frame = keyWindow.bounds;
+        securityOverlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         securityOverlay.layer.zPosition = MAXFLOAT;
         
         [keyWindow addSubview:securityOverlay];
