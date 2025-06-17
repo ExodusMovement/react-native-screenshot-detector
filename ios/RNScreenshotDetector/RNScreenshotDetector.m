@@ -69,14 +69,6 @@ RCT_EXPORT_MODULE();
         }
         
         [self sendEventWithName:@"ScreenRecordingChanged" body:@{@"isRecording": @(isRecording)}];
-        
-        if (isProtectionEnabled) {
-            if (isRecording) {
-                [self showSecurityOverlay];
-            } else {
-                [self hideSecurityOverlay];
-            }
-        }
     }
 }
 
@@ -84,13 +76,6 @@ RCT_EXPORT_METHOD(disableScreenshots) {
     dispatch_async(dispatch_get_main_queue(), ^{
         isProtectionEnabled = YES;
         [self enableTrueScreenshotPrevention];
-        
-        if (@available(iOS 11.0, *)) {
-            BOOL currentlyRecording = [UIScreen mainScreen].isCaptured;
-            if (currentlyRecording) {
-                [self showSecurityOverlay];
-            }
-        }
     });
 }
 
@@ -98,7 +83,6 @@ RCT_EXPORT_METHOD(enableScreenshots) {
     dispatch_async(dispatch_get_main_queue(), ^{
         isProtectionEnabled = NO;
         [self disableTrueScreenshotPrevention];
-        [self hideSecurityOverlay];
     });
 }
 
@@ -110,6 +94,14 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
     } else {
         resolve(@NO);
     }
+}
+
+RCT_EXPORT_METHOD(subscribeToScreenRecording) {
+    [self startObserving];
+}
+
+RCT_EXPORT_METHOD(unsubscribeFromScreenRecording) {
+    [self stopObserving];
 }
 
 // Screenshot Prevention using Secure Text Field
@@ -140,38 +132,6 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
 - (void)disableTrueScreenshotPrevention {
     if (self.secureTextField != nil) {
         self.secureTextField.secureTextEntry = NO;
-    }
-}
-
-- (void)showSecurityOverlay {
-    if (securityOverlay != nil) {
-        return;
-    }
-    
-    UIWindow *keyWindow = [self getKeyWindow];
-    
-    if (keyWindow != nil) {
-        // Use light blur with dark tint for subtle but dark effect
-        UIBlurEffect *blurEffect;
-        if (@available(iOS 13.0, *)) {
-            blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark];
-        } else {
-            blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
-        }
-        
-        securityOverlay = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
-        securityOverlay.frame = keyWindow.bounds;
-        securityOverlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        securityOverlay.layer.zPosition = MAXFLOAT;
-        
-        [keyWindow addSubview:securityOverlay];
-    }
-}
-
-- (void)hideSecurityOverlay {
-    if (securityOverlay != nil) {
-        [securityOverlay removeFromSuperview];
-        securityOverlay = nil;
     }
 }
 

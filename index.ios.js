@@ -16,11 +16,18 @@ const subscribe = (cb) => {
 }
 
 const subscribeToScreenRecording = (cb) => {
+  if (RNScreenshotDetector.subscribeToScreenRecording) {
+    RNScreenshotDetector.subscribeToScreenRecording()
+  }
+  
   const sub = eventEmitter.addListener(SCREEN_RECORDING_EVENT, (data) => {
     cb(data)
   })
   return () => {
     sub.remove()
+    if (RNScreenshotDetector.unsubscribeFromScreenRecording) {
+      RNScreenshotDetector.unsubscribeFromScreenRecording()
+    }
   }
 }
 
