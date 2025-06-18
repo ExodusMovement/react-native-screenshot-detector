@@ -9,6 +9,9 @@
 
 @interface RNScreenshotDetector : RCTEventEmitter <RCTBridgeModule>
 
+@property (nonatomic, strong) UITextField *secureTextField;
+
 - (void)screenshotDetected:(NSNotification*)notification;
+- (void)screenRecordingChanged:(NSNotification*)notification;
 
 @end
