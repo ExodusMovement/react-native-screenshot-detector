@@ -32,15 +32,13 @@ RCT_EXPORT_MODULE();
             [self screenshotDetected:notification];
         }];
     
-    if (@available(iOS 11.0, *)) {
-        screenRecordingObserver = [[NSNotificationCenter defaultCenter]
-            addObserverForName:UIScreenCapturedDidChangeNotification
-            object:nil
-            queue:mainQueue
-            usingBlock:^(NSNotification *notification) {
-                [self screenRecordingChanged:notification];
-            }];
-    }
+    screenRecordingObserver = [[NSNotificationCenter defaultCenter]
+        addObserverForName:UIScreenCapturedDidChangeNotification
+        object:nil
+        queue:mainQueue
+        usingBlock:^(NSNotification *notification) {
+            [self screenRecordingChanged:notification];
+        }];
 }
 
 - (void)stopObserving {
@@ -63,10 +61,7 @@ RCT_EXPORT_MODULE();
 
 - (void)screenRecordingChanged:(NSNotification *)notification {
     if (screenRecordingObserver != nil) {
-        BOOL isRecording = NO;
-        if (@available(iOS 11.0, *)) {
-            isRecording = [UIScreen mainScreen].isCaptured;
-        }
+        BOOL isRecording = [UIScreen mainScreen].isCaptured;
         
         [self sendEventWithName:@"ScreenRecordingChanged" body:@{@"isRecording": @(isRecording)}];
     }
@@ -88,12 +83,8 @@ RCT_EXPORT_METHOD(enableScreenshots) {
 
 RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
-    if (@available(iOS 11.0, *)) {
-        BOOL isRecording = [UIScreen mainScreen].isCaptured;
-        resolve(@(isRecording));
-    } else {
-        resolve(@NO);
-    }
+    BOOL isRecording = [UIScreen mainScreen].isCaptured;
+    resolve(@(isRecording));
 }
 
 RCT_EXPORT_METHOD(subscribeToScreenRecording) {
@@ -138,19 +129,17 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenRecording) {
 - (UIWindow *)getKeyWindow {
     UIWindow *keyWindow = nil;
     
-    if (@available(iOS 13.0, *)) {
-        NSSet<UIScene *> *connectedScenes = [UIApplication sharedApplication].connectedScenes;
-        for (UIScene *scene in connectedScenes) {
-            if ([scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *windowScene = (UIWindowScene *)scene;
-                for (UIWindow *window in windowScene.windows) {
-                    if (window.isKeyWindow) {
-                        keyWindow = window;
-                        break;
-                    }
+    NSSet<UIScene *> *connectedScenes = [UIApplication sharedApplication].connectedScenes;
+    for (UIScene *scene in connectedScenes) {
+        if ([scene isKindOfClass:[UIWindowScene class]]) {
+            UIWindowScene *windowScene = (UIWindowScene *)scene;
+            for (UIWindow *window in windowScene.windows) {
+                if (window.isKeyWindow) {
+                    keyWindow = window;
+                    break;
                 }
-                if (keyWindow) break;
             }
+            if (keyWindow) break;
         }
     }
     
