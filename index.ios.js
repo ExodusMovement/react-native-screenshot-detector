@@ -43,11 +43,11 @@ const enableScreenshots = () => {
   }
 }
 
-const isScreenRecording = () => {
+const isScreenRecording = async () => {
   if (RNScreenshotDetector.isScreenRecording) {
     return RNScreenshotDetector.isScreenRecording()
   } else {
-    return Promise.resolve(false)
+    return false
   }
 }
 
