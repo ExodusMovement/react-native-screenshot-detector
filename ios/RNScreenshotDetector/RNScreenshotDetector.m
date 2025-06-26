@@ -12,7 +12,6 @@
 {
     id screenshotObserver;
     id screenRecordingObserver;
-    UIView *securityOverlay;
     BOOL isProtectionEnabled;
 }
 
@@ -24,21 +23,26 @@ RCT_EXPORT_MODULE();
 
 - (void)startObserving {
     NSOperationQueue *mainQueue = [NSOperationQueue mainQueue];
-    screenshotObserver = [[NSNotificationCenter defaultCenter] 
-        addObserverForName:UIApplicationUserDidTakeScreenshotNotification
-        object:nil
-        queue:mainQueue
-        usingBlock:^(NSNotification *notification) {
-            [self screenshotDetected:notification];
-        }];
     
-    screenRecordingObserver = [[NSNotificationCenter defaultCenter]
-        addObserverForName:UIScreenCapturedDidChangeNotification
-        object:nil
-        queue:mainQueue
-        usingBlock:^(NSNotification *notification) {
-            [self screenRecordingChanged:notification];
-        }];
+    if (screenshotObserver == nil) {
+        screenshotObserver = [[NSNotificationCenter defaultCenter] 
+            addObserverForName:UIApplicationUserDidTakeScreenshotNotification
+            object:nil
+            queue:mainQueue
+            usingBlock:^(NSNotification *notification) {
+                [self screenshotDetected:notification];
+            }];
+    }
+    
+    if (screenRecordingObserver == nil) {
+        screenRecordingObserver = [[NSNotificationCenter defaultCenter]
+            addObserverForName:UIScreenCapturedDidChangeNotification
+            object:nil
+            queue:mainQueue
+            usingBlock:^(NSNotification *notification) {
+                [self screenRecordingChanged:notification];
+            }];
+    }
 }
 
 - (void)stopObserving {
@@ -60,9 +64,9 @@ RCT_EXPORT_MODULE();
 }
 
 - (void)screenRecordingChanged:(NSNotification *)notification {
+    BOOL isRecording = [UIScreen mainScreen].isCaptured;
+    
     if (screenRecordingObserver != nil) {
-        BOOL isRecording = [UIScreen mainScreen].isCaptured;
-        
         [self sendEventWithName:@"ScreenRecordingChanged" body:@{@"isRecording": @(isRecording)}];
     }
 }
@@ -87,11 +91,12 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
     resolve(@(isRecording));
 }
 
-RCT_EXPORT_METHOD(subscribeToScreenRecording) {
+// Clear and explicit method names
+RCT_EXPORT_METHOD(subscribeToScreenshotAndScreenRecording) {
     [self startObserving];
 }
 
-RCT_EXPORT_METHOD(unsubscribeFromScreenRecording) {
+RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
     [self stopObserving];
 }
 
@@ -130,6 +135,7 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenRecording) {
     UIWindow *keyWindow = nil;
     
     NSSet<UIScene *> *connectedScenes = [UIApplication sharedApplication].connectedScenes;
+    
     for (UIScene *scene in connectedScenes) {
         if ([scene isKindOfClass:[UIWindowScene class]]) {
             UIWindowScene *windowScene = (UIWindowScene *)scene;
@@ -140,18 +146,6 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenRecording) {
                 }
             }
             if (keyWindow) break;
-        }
-    }
-    
-    if (keyWindow == nil) {
-        keyWindow = [UIApplication sharedApplication].keyWindow;
-        if (keyWindow == nil) {
-            for (UIWindow *window in [UIApplication sharedApplication].windows) {
-                if (window.isKeyWindow) {
-                    keyWindow = window;
-                    break;
-                }
-            }
         }
     }
     
