@@ -1,6 +1,7 @@
 
 package com.reactlibrary;
 
+import android.app.Activity;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -25,25 +26,38 @@ public class RNScreenshotDetectorModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void disableScreenshots() {
-    getCurrentActivity().runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-      }
-    });
+    Activity currentActivity = getCurrentActivity();
+    if (currentActivity != null) {
+      currentActivity.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Window window = getWindow();
+          if (window != null) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+          }
+        }
+      });
+    }
   }
 
   @ReactMethod
   public void enableScreenshots() {
-    getCurrentActivity().runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-      }
-    });
+    Activity currentActivity = getCurrentActivity();
+    if (currentActivity != null) {
+      currentActivity.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Window window = getWindow();
+          if (window != null) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+          }
+        }
+      });
+    }
   }
 
   private Window getWindow() {
-    return getCurrentActivity().getWindow();
+    Activity currentActivity = getCurrentActivity();
+    return currentActivity != null ? currentActivity.getWindow() : null;
   }
 }
