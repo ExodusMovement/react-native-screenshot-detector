@@ -13,6 +13,8 @@
     id screenshotObserver;
     id screenRecordingObserver;
     BOOL isProtectionEnabled;
+    UIWindow *originalKeyWindow;      
+    CALayer *originalSuperlayer;      
 }
 
 RCT_EXPORT_MODULE();
@@ -91,7 +93,6 @@ RCT_EXPORT_METHOD(isScreenRecording:(RCTPromiseResolveBlock)resolve
     resolve(@(isRecording));
 }
 
-// Clear and explicit method names
 RCT_EXPORT_METHOD(subscribeToScreenshotAndScreenRecording) {
     [self startObserving];
 }
@@ -102,32 +103,58 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
 
 // Screenshot Prevention using Secure Text Field
 - (void)enableTrueScreenshotPrevention {
-    if (self.secureTextField == nil) {
-        self.secureTextField = [[UITextField alloc] init];
-        self.secureTextField.userInteractionEnabled = NO;
-        self.secureTextField.secureTextEntry = YES;
+    @try {
+        if (self.secureTextField == nil) {
+            self.secureTextField = [[UITextField alloc] init];
+            self.secureTextField.userInteractionEnabled = NO;
+            self.secureTextField.secureTextEntry = YES;
+        }
         
         UIWindow *keyWindow = [self getKeyWindow];
         if (keyWindow != nil) {
+            originalKeyWindow = keyWindow;
+            originalSuperlayer = keyWindow.layer.superlayer;
+            
             [keyWindow makeKeyAndVisible];
             
-            // Make the app window a sublayer of the secure text field
-            [keyWindow.layer.superlayer addSublayer:self.secureTextField.layer];
-            
-            // Add the window layer as a sublayer of the secure text field's first sublayer
-            NSArray *sublayers = self.secureTextField.layer.sublayers;
-            if (sublayers.count > 0) {
-                [sublayers.firstObject addSublayer:keyWindow.layer];
-            }
-        }
-    } else {
-        self.secureTextField.secureTextEntry = YES;
+            if (originalSuperlayer != nil) {
+                [originalSuperlayer addSublayer:self.secureTextField.layer];
+                
+                [keyWindow.layer removeFromSuperlayer];
+                
+                NSArray *sublayers = self.secureTextField.layer.sublayers;
+                if (sublayers.count > 0) {
+                    [sublayers.firstObject addSublayer:keyWindow.layer];
+                } else {
+                    [self.secureTextField.layer addSublayer:keyWindow.layer];
+                }
+            }   
+        } 
+    } @catch (NSException *exception) {
+        NSLog(@"[RNScreenshotDetector] Error in enableTrueScreenshotPrevention: %@", exception);
     }
 }
 
 - (void)disableTrueScreenshotPrevention {
-    if (self.secureTextField != nil) {
-        self.secureTextField.secureTextEntry = NO;
+    @try {
+        if (self.secureTextField != nil) {
+            self.secureTextField.secureTextEntry = NO;
+            
+            if (originalKeyWindow != nil && originalSuperlayer != nil) {
+                [originalKeyWindow.layer removeFromSuperlayer];
+                [originalSuperlayer addSublayer:originalKeyWindow.layer];
+                
+                [self.secureTextField.layer removeFromSuperlayer];
+            }
+            
+            originalKeyWindow = nil;
+            originalSuperlayer = nil;
+            
+            [self.secureTextField removeFromSuperview];
+            self.secureTextField = nil;
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"[RNScreenshotDetector] Error in disableTrueScreenshotPrevention: %@", exception);
     }
 }
 
