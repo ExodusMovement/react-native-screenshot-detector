@@ -104,6 +104,11 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
 // Screenshot Prevention using Secure Text Field
 - (void)enableTrueScreenshotPrevention {
     @try {
+        if (isProtectionEnabled && self.secureTextField != nil) {
+            NSLog(@"[RNScreenshotDetector] Screenshot protection already enabled, skipping");
+            return;
+        }
+        
         if (self.secureTextField == nil) {
             self.secureTextField = [[UITextField alloc] init];
             self.secureTextField.userInteractionEnabled = NO;
@@ -112,6 +117,11 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
         
         UIWindow *keyWindow = [self getKeyWindow];
         if (keyWindow != nil) {
+            if (originalKeyWindow != nil && originalKeyWindow == keyWindow) {
+                NSLog(@"[RNScreenshotDetector] Same keyWindow already protected, skipping");
+                return;
+            }
+            
             originalKeyWindow = keyWindow;
             originalSuperlayer = keyWindow.layer.superlayer;
             
@@ -141,8 +151,12 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
             self.secureTextField.secureTextEntry = NO;
             
             if (originalKeyWindow != nil && originalSuperlayer != nil) {
-                [originalKeyWindow.layer removeFromSuperlayer];
-                [originalSuperlayer addSublayer:originalKeyWindow.layer];
+                if (originalKeyWindow.superview != nil || originalKeyWindow.layer.superlayer != nil) {
+                    [originalKeyWindow.layer removeFromSuperlayer];
+                    [originalSuperlayer addSublayer:originalKeyWindow.layer];
+                } else {
+                    NSLog(@"[RNScreenshotDetector] originalKeyWindow is no longer valid, skipping restoration");
+                }
                 
                 [self.secureTextField.layer removeFromSuperlayer];
             }
@@ -155,6 +169,13 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
         }
     } @catch (NSException *exception) {
         NSLog(@"[RNScreenshotDetector] Error in disableTrueScreenshotPrevention: %@", exception);
+        
+        originalKeyWindow = nil;
+        originalSuperlayer = nil;
+        if (self.secureTextField != nil) {
+            [self.secureTextField removeFromSuperview];
+            self.secureTextField = nil;
+        }
     }
 }
 
