@@ -1,6 +1,6 @@
 {
   "name": "@exodus/react-native-screenshot-detector",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "detect when the user takes a screenshot",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
