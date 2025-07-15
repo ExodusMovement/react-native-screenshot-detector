@@ -104,9 +104,22 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
 // Screenshot Prevention using Secure Text Field
 - (void)enableTrueScreenshotPrevention {
     @try {
-        if (isProtectionEnabled && self.secureTextField != nil) {
-            NSLog(@"[RNScreenshotDetector] Screenshot protection already enabled, skipping");
-            return;
+        // Check if the protection is already fully active
+        if (isProtectionEnabled && self.secureTextField != nil && 
+            originalKeyWindow != nil && originalSuperlayer != nil) {
+            
+            UIWindow *currentKeyWindow = [self getKeyWindow];
+            
+            // Check if the same keyWindow is already fully protected
+            if (originalKeyWindow == currentKeyWindow && 
+                self.secureTextField.layer.superlayer == originalSuperlayer) {
+                NSLog(@"[RNScreenshotDetector] Screenshot protection fully active, skipping");
+                return;
+            } else {
+                NSLog(@"[RNScreenshotDetector] Protection partially active, need to reset");
+                // If only partially set, reset and set again
+                [self disableTrueScreenshotPrevention];
+            }
         }
         
         if (self.secureTextField == nil) {
@@ -117,11 +130,6 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
         
         UIWindow *keyWindow = [self getKeyWindow];
         if (keyWindow != nil) {
-            if (originalKeyWindow != nil && originalKeyWindow == keyWindow) {
-                NSLog(@"[RNScreenshotDetector] Same keyWindow already protected, skipping");
-                return;
-            }
-            
             originalKeyWindow = keyWindow;
             originalSuperlayer = keyWindow.layer.superlayer;
             
@@ -139,7 +147,9 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
                     [self.secureTextField.layer addSublayer:keyWindow.layer];
                 }
             }   
-        } 
+        } else {
+            NSLog(@"[RNScreenshotDetector] No keyWindow found, cannot enable protection");
+        }
     } @catch (NSException *exception) {
         NSLog(@"[RNScreenshotDetector] Error in enableTrueScreenshotPrevention: %@", exception);
     }
@@ -148,19 +158,21 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
 - (void)disableTrueScreenshotPrevention {
     @try {
         if (self.secureTextField != nil) {
+            
             self.secureTextField.secureTextEntry = NO;
             
+            // Safe recovery: check if references are valid
             if (originalKeyWindow != nil && originalSuperlayer != nil) {
+                // Check if keyWindow is still valid
                 if (originalKeyWindow.superview != nil || originalKeyWindow.layer.superlayer != nil) {
                     [originalKeyWindow.layer removeFromSuperlayer];
                     [originalSuperlayer addSublayer:originalKeyWindow.layer];
-                } else {
-                    NSLog(@"[RNScreenshotDetector] originalKeyWindow is no longer valid, skipping restoration");
                 }
                 
                 [self.secureTextField.layer removeFromSuperlayer];
             }
             
+            // Safe reference cleanup
             originalKeyWindow = nil;
             originalSuperlayer = nil;
             
@@ -169,7 +181,6 @@ RCT_EXPORT_METHOD(unsubscribeFromScreenshotAndScreenRecording) {
         }
     } @catch (NSException *exception) {
         NSLog(@"[RNScreenshotDetector] Error in disableTrueScreenshotPrevention: %@", exception);
-        
         originalKeyWindow = nil;
         originalSuperlayer = nil;
         if (self.secureTextField != nil) {
